@@ -417,15 +417,27 @@
         }
 
         class MazeGenerator {
-            constructor(rows, cols) {
+            constructor(rows, cols, difficulty = 'medium') {
                 this.rows = rows;
                 this.cols = cols;
+                this.difficulty = difficulty;
                 this.maze = [];
             }
 
             generate() {
                 this.initMaze();
+                
+                const level = {
+                    easy: 1,
+                    medium: 2,
+                    hard: 3,
+                    extreme: 4,
+                    hell: 5
+                }[this.difficulty] || 2;
+
                 this.recursiveBacktrack(0, 0);
+                this.addBranchPaths(level);
+                
                 return this.maze;
             }
 
@@ -455,6 +467,87 @@
                         this.removeWall(row, col, dir);
                         this.recursiveBacktrack(newRow, newCol);
                     }
+                }
+            }
+
+            addBranchPaths(level) {
+                const branchCount = {
+                    1: Math.floor((this.rows * this.cols) * 0.02),
+                    2: Math.floor((this.rows * this.cols) * 0.06),
+                    3: Math.floor((this.rows * this.cols) * 0.12),
+                    4: Math.floor((this.rows * this.cols) * 0.18),
+                    5: Math.floor((this.rows * this.cols) * 0.25)
+                }[level] || 5;
+
+                for (let i = 0; i < branchCount; i++) {
+                    this.createBranch();
+                }
+            }
+
+            createBranch() {
+                const availableCells = [];
+                for (let r = 1; r < this.rows - 1; r++) {
+                    for (let c = 1; c < this.cols - 1; c++) {
+                        const cell = this.maze[r][c];
+                        const openPaths = [cell.top, cell.right, cell.bottom, cell.left].filter(p => !p).length;
+                        if (openPaths >= 1 && openPaths <= 2) {
+                            availableCells.push({ row: r, col: c });
+                        }
+                    }
+                }
+
+                if (availableCells.length === 0) return;
+
+                const idx = Math.floor(Math.random() * availableCells.length);
+                const startCell = availableCells[idx];
+
+                this.growBranch(startCell.row, startCell.col);
+            }
+
+            growBranch(startRow, startCol) {
+                const maxLength = Math.floor(Math.random() * 12) + 6;
+                let row = startRow;
+                let col = startCol;
+                let prevRow = -1;
+                let prevCol = -1;
+
+                for (let i = 0; i < maxLength; i++) {
+                    const directions = this.getRandomDirections();
+                    let moved = false;
+
+                    for (const dir of directions) {
+                        const [newRow, newCol] = this.getNeighbor(row, col, dir);
+
+                        if (this.isValidCell(newRow, newCol) && 
+                            (newRow !== prevRow || newCol !== prevCol) &&
+                            this.maze[row][col][dir]) {
+                            
+                            const oppositeDir = { 'top': 'bottom', 'right': 'left', 'bottom': 'top', 'left': 'right' };
+                            
+                            if (this.maze[newRow][newCol][oppositeDir[dir]]) {
+                                const targetOpenPaths = [
+                                    this.maze[newRow][newCol].top,
+                                    this.maze[newRow][newCol].right,
+                                    this.maze[newRow][newCol].bottom,
+                                    this.maze[newRow][newCol].left
+                                ].filter(p => !p).length;
+
+                                if (targetOpenPaths === 0) {
+                                    this.maze[row][col][dir] = false;
+                                    this.maze[newRow][newCol][oppositeDir[dir]] = false;
+                                    
+                                    prevRow = row;
+                                    prevCol = col;
+                                    row = newRow;
+                                    col = newCol;
+                                    moved = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!moved) break;
                 }
             }
 
@@ -890,7 +983,7 @@
                 const config = this.difficultyConfig[this.difficulty];
                 this.cellSize = config.cellSize;
 
-                this.mazeGenerator = new MazeGenerator(config.rows, config.cols);
+                this.mazeGenerator = new MazeGenerator(config.rows, config.cols, this.difficulty);
                 this.maze = this.mazeGenerator.generate();
 
                 this.start = { x: 0, y: 0 };
