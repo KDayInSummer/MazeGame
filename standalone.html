@@ -11,38 +11,64 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --container-bg: white;
+            --text-color: #2c3e50;
+            --primary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+        }
+
+        body.dark-theme {
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --container-bg: #1f1f3a;
+            --text-color: #ecf0f1;
+            --primary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            transition: all 0.3s ease;
         }
 
         .container {
-            background: white;
+            background: var(--container-bg);
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
+            max-width: 90vw;
         }
 
         header h1 {
-            color: #2c3e50;
+            color: var(--text-color);
             margin-bottom: 20px;
-            font-size: 2.5em;
+            font-size: 2em;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .controls {
             margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
         }
 
         .controls select,
         .controls button {
-            padding: 10px 20px;
-            margin: 0 5px;
+            padding: 10px 16px;
+            margin: 0 3px;
             border: none;
             border-radius: 8px;
             font-size: 14px;
@@ -55,45 +81,65 @@
             color: #2c3e50;
         }
 
+        body.dark-theme .controls select {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+
         .controls button {
-            background: #3498db;
+            background: var(--primary-color);
             color: white;
         }
 
         .controls button:hover {
-            background: #2980b9;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .controls button:active {
             transform: translateY(0);
         }
 
+        .theme-btn {
+            background: #9b59b6 !important;
+        }
+
+        .sound-btn {
+            background: #f39c12 !important;
+        }
+
         .status-bar {
             display: flex;
             justify-content: center;
-            gap: 30px;
+            gap: 15px;
             margin-bottom: 15px;
-            font-size: 16px;
-            color: #34495e;
+            font-size: 14px;
+            color: var(--text-color);
+            flex-wrap: wrap;
         }
 
         .status-item {
-            background: #ecf0f1;
-            padding: 8px 16px;
+            background: rgba(236, 240, 241, 0.5);
+            padding: 6px 12px;
             border-radius: 20px;
+        }
+
+        body.dark-theme .status-item {
+            background: rgba(44, 62, 80, 0.5);
         }
 
         #mazeCanvas {
             border: 3px solid #2c3e50;
             border-radius: 8px;
             background: #ecf0f1;
+            max-width: 100%;
+            touch-action: none;
         }
 
         .instructions {
             margin-top: 15px;
             color: #7f8c8d;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .modal {
@@ -104,17 +150,19 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.7);
             justify-content: center;
             align-items: center;
         }
 
         .modal-content {
-            background: white;
-            padding: 40px;
+            background: var(--container-bg);
+            padding: 30px;
             border-radius: 16px;
             text-align: center;
             animation: fadeIn 0.3s ease;
+            max-width: 90%;
+            width: 320px;
         }
 
         @keyframes fadeIn {
@@ -129,22 +177,22 @@
         }
 
         .modal-content h2 {
-            color: #27ae60;
-            margin-bottom: 20px;
-            font-size: 2em;
+            color: var(--success-color);
+            margin-bottom: 15px;
+            font-size: 1.8em;
         }
 
         .modal-content p {
-            color: #34495e;
-            font-size: 1.2em;
+            color: var(--text-color);
+            font-size: 1.1em;
             margin-bottom: 10px;
         }
 
         .modal-content button {
-            margin-top: 20px;
-            padding: 12px 40px;
-            font-size: 16px;
-            background: #27ae60;
+            margin-top: 15px;
+            padding: 10px 30px;
+            font-size: 14px;
+            background: var(--success-color);
             color: white;
             border: none;
             border-radius: 8px;
@@ -153,8 +201,87 @@
         }
 
         .modal-content button:hover {
-            background: #2ecc71;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .leaderboard-btn {
+            background: #9b59b6 !important;
+        }
+
+        .leaderboard-modal .modal-content {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .leaderboard-table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+            color: var(--text-color);
+        }
+
+        .leaderboard-table th {
+            color: #7f8c8d;
+            font-weight: normal;
+        }
+
+        .gold { color: #f1c40f; }
+        .silver { color: #95a5a6; }
+        .bronze { color: #cd7f32; }
+
+        .touch-controls {
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 200px;
+            margin: 15px auto 0;
+        }
+
+        .touch-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .touch-btn:active {
+            transform: scale(0.9);
+        }
+
+        .touch-btn.up { grid-column: 2; grid-row: 1; }
+        .touch-btn.left { grid-column: 1; grid-row: 2; }
+        .touch-btn.down { grid-column: 2; grid-row: 2; }
+        .touch-btn.right { grid-column: 3; grid-row: 2; }
+
+        @media (max-width: 600px) {
+            .touch-controls {
+                display: grid;
+            }
+            header h1 {
+                font-size: 1.5em;
+            }
+            .controls {
+                gap: 5px;
+            }
+            .controls select,
+            .controls button {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -174,6 +301,9 @@
             <button id="pauseBtn">暂停</button>
             <button id="hintBtn">提示</button>
             <button id="resetBtn">重新开始</button>
+            <button id="leaderboardBtn" class="leaderboard-btn">排行榜</button>
+            <button id="soundBtn" class="sound-btn">🔊 音效</button>
+            <button id="themeBtn" class="theme-btn">🌙 深色</button>
         </div>
         
         <div class="status-bar">
@@ -188,6 +318,13 @@
             <p>操作说明: 使用方向键或WASD控制移动 | 空格键暂停/继续 | R键重新开始</p>
         </div>
         
+        <div class="touch-controls">
+            <button class="touch-btn up">↑</button>
+            <button class="touch-btn left">←</button>
+            <button class="touch-btn down">↓</button>
+            <button class="touch-btn right">→</button>
+        </div>
+        
         <div id="winModal" class="modal">
             <div class="modal-content">
                 <h2>🎉 恭喜通关！</h2>
@@ -196,9 +333,87 @@
                 <button id="playAgainBtn">再玩一次</button>
             </div>
         </div>
+        
+        <div id="leaderboardModal" class="modal leaderboard-modal">
+            <div class="modal-content">
+                <h2>🏆 排行榜</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>难度</th>
+                            <th>时间</th>
+                            <th>得分</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                    </tbody>
+                </table>
+                <button id="closeLeaderboardBtn">关闭</button>
+            </div>
+        </div>
     </div>
     
     <script>
+        class SoundManager {
+            constructor() {
+                this.audioContext = null;
+                this.enabled = true;
+                this.init();
+            }
+
+            init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.log('Web Audio API not supported');
+                }
+            }
+
+            play(frequency, duration, type = 'sine', volume = 0.1) {
+                if (!this.enabled || !this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.type = type;
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                
+                gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+
+            playMove() {
+                this.play(440, 0.05, 'sine', 0.05);
+            }
+
+            playWall() {
+                this.play(200, 0.1, 'sawtooth', 0.08);
+            }
+
+            playWin() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => this.play(freq, 0.3, 'sine', 0.1), i * 150);
+                });
+            }
+
+            playHint() {
+                this.play(880, 0.15, 'square', 0.05);
+            }
+
+            toggle() {
+                this.enabled = !this.enabled;
+                return this.enabled;
+            }
+        }
+
         class MazeGenerator {
             constructor(rows, cols) {
                 this.rows = rows;
@@ -597,10 +812,53 @@
             }
         }
 
+        class Leaderboard {
+            constructor() {
+                this.entries = this.load();
+            }
+
+            load() {
+                try {
+                    const data = localStorage.getItem('mazeGameLeaderboard');
+                    return data ? JSON.parse(data) : [];
+                } catch {
+                    return [];
+                }
+            }
+
+            save() {
+                localStorage.setItem('mazeGameLeaderboard', JSON.stringify(this.entries));
+            }
+
+            addEntry(difficulty, time, score) {
+                const entry = {
+                    difficulty,
+                    time,
+                    score,
+                    date: new Date().toLocaleDateString('zh-CN')
+                };
+                this.entries.push(entry);
+                this.entries.sort((a, b) => b.score - a.score);
+                this.entries = this.entries.slice(0, 10);
+                this.save();
+            }
+
+            getEntries() {
+                return this.entries;
+            }
+
+            clear() {
+                this.entries = [];
+                this.save();
+            }
+        }
+
         class GameController {
-            constructor(renderer, timer) {
+            constructor(renderer, timer, soundManager, leaderboard) {
                 this.renderer = renderer;
                 this.timer = timer;
+                this.soundManager = soundManager;
+                this.leaderboard = leaderboard;
                 this.maze = null;
                 this.mazeGenerator = null;
                 this.pathFinder = null;
@@ -697,6 +955,7 @@
                 if (this.canMove(newX, newY, direction)) {
                     this.player.x = newX;
                     this.player.y = newY;
+                    this.soundManager.playMove();
 
                     const pos = { x: newX, y: newY };
                     const trailIndex = this.player.trail.findIndex(p => p.x === newX && p.y === newY);
@@ -712,6 +971,8 @@
                     if (this.player.x === this.end.x && this.player.y === this.end.y) {
                         this.win();
                     }
+                } else {
+                    this.soundManager.playWall();
                 }
             }
 
@@ -745,6 +1006,7 @@
                     this.hintPath = path.slice(1);
                     this.score = Math.max(0, this.score - 100);
                     this.updateScore(this.score);
+                    this.soundManager.playHint();
                     this.render();
 
                     setTimeout(() => {
@@ -759,10 +1021,14 @@
                 this.status = 'completed';
                 this.updateStatus('通关！');
                 this.updateScore(this.calculateScore());
+                this.soundManager.playWin();
+
+                const time = this.timer.formatTime(this.timer.getTime());
+                this.leaderboard.addEntry(this.difficulty, time, this.score);
 
                 if (this.onWin) {
                     this.onWin({
-                        time: this.timer.formatTime(this.timer.getTime()),
+                        time,
                         score: this.score
                     });
                 }
@@ -824,10 +1090,19 @@
             const winTimeDisplay = document.getElementById('winTime');
             const winScoreDisplay = document.getElementById('winScore');
             const playAgainBtn = document.getElementById('playAgainBtn');
+            const leaderboardBtn = document.getElementById('leaderboardBtn');
+            const leaderboardModal = document.getElementById('leaderboardModal');
+            const leaderboardBody = document.getElementById('leaderboardBody');
+            const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+            const soundBtn = document.getElementById('soundBtn');
+            const themeBtn = document.getElementById('themeBtn');
+            const touchBtns = document.querySelectorAll('.touch-btn');
 
             const renderer = new Renderer(canvas);
             const timer = new Timer();
-            const game = new GameController(renderer, timer);
+            const soundManager = new SoundManager();
+            const leaderboard = new Leaderboard();
+            const game = new GameController(renderer, timer, soundManager, leaderboard);
 
             timer.onTick = (seconds) => {
                 timerDisplay.textContent = timer.formatTime(seconds);
@@ -884,8 +1159,37 @@
                 game.init(difficultySelect.value);
             });
 
+            soundBtn.addEventListener('click', () => {
+                const enabled = soundManager.toggle();
+                soundBtn.textContent = enabled ? '🔊 音效' : '🔇 静音';
+            });
+
+            themeBtn.addEventListener('click', () => {
+                document.body.classList.toggle('dark-theme');
+                const isDark = document.body.classList.contains('dark-theme');
+                themeBtn.textContent = isDark ? '☀️ 浅色' : '🌙 深色';
+            });
+
+            leaderboardBtn.addEventListener('click', () => {
+                showLeaderboard();
+                leaderboardModal.style.display = 'flex';
+            });
+
+            closeLeaderboardBtn.addEventListener('click', () => {
+                leaderboardModal.style.display = 'none';
+            });
+
+            touchBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const direction = e.target.classList.contains('up') ? 'up' :
+                                      e.target.classList.contains('down') ? 'down' :
+                                      e.target.classList.contains('left') ? 'left' : 'right';
+                    game.movePlayer(direction);
+                });
+            });
+
             document.addEventListener('keydown', (e) => {
-                if (winModal.style.display === 'flex') return;
+                if (winModal.style.display === 'flex' || leaderboardModal.style.display === 'flex') return;
 
                 switch (e.key) {
                     case 'ArrowUp':
@@ -932,6 +1236,43 @@
                         break;
                 }
             });
+
+            function showLeaderboard() {
+                const entries = leaderboard.getEntries();
+                leaderboardBody.innerHTML = '';
+                
+                if (entries.length === 0) {
+                    leaderboardBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暂无记录</td></tr>';
+                    return;
+                }
+
+                entries.forEach((entry, index) => {
+                    const row = document.createElement('tr');
+                    const rankClass = index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? 'bronze' : '';
+                    const difficultyText = entry.difficulty === 'easy' ? '简单' : entry.difficulty === 'medium' ? '中等' : '困难';
+                    
+                    row.innerHTML = `
+                        <td><span class="${rankClass}">${index + 1}</span></td>
+                        <td>${difficultyText}</td>
+                        <td>${entry.time}</td>
+                        <td>${entry.score}</td>
+                    `;
+                    leaderboardBody.appendChild(row);
+                });
+            }
+
+            const savedTheme = localStorage.getItem('mazeGameTheme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                themeBtn.textContent = '☀️ 浅色';
+            }
+
+            document.body.addEventListener('toggle', (e) => {
+                if (e.target === document.body) {
+                    const isDark = document.body.classList.contains('dark-theme');
+                    localStorage.setItem('mazeGameTheme', isDark ? 'dark' : 'light');
+                }
+            }, true);
 
             game.init('medium');
         });
