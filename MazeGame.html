@@ -480,11 +480,11 @@
                 }[level] || 5;
 
                 for (let i = 0; i < branchCount; i++) {
-                    this.createBranch();
+                    this.createBranch(level);
                 }
             }
 
-            createBranch() {
+            createBranch(level) {
                 const availableCells = [];
                 for (let r = 1; r < this.rows - 1; r++) {
                     for (let c = 1; c < this.cols - 1; c++) {
@@ -501,11 +501,21 @@
                 const idx = Math.floor(Math.random() * availableCells.length);
                 const startCell = availableCells[idx];
 
-                this.growBranch(startCell.row, startCell.col);
+                this.growBranch(startCell.row, startCell.col, level);
             }
 
-            growBranch(startRow, startCol) {
-                const maxLength = Math.floor(Math.random() * 12) + 6;
+            growBranch(startRow, startCol, level) {
+                const branchLengths = {
+                    1: { min: 3, max: 8 },
+                    2: { min: 5, max: 12 },
+                    3: { min: 8, max: 18 },
+                    4: { min: 12, max: 25 },
+                    5: { min: 15, max: 35 }
+                };
+                
+                const lengthConfig = branchLengths[level] || { min: 5, max: 12 };
+                const range = lengthConfig.max - lengthConfig.min;
+                const maxLength = Math.floor(Math.random() * range) + lengthConfig.min;
                 let row = startRow;
                 let col = startCol;
                 let prevRow = -1;
