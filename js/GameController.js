@@ -121,18 +121,17 @@ class GameController {
             return false;
         }
 
-        const cell = this.maze[y][x];
-        let oppositeDir;
-
-        switch (direction) {
-            case 'up': oppositeDir = 'bottom'; break;
-            case 'down': oppositeDir = 'top'; break;
-            case 'left': oppositeDir = 'right'; break;
-            case 'right': oppositeDir = 'left'; break;
-        }
+        const oppositeDir = {
+            'up': 'bottom',
+            'down': 'top',
+            'left': 'right',
+            'right': 'left'
+        };
 
         const currentCell = this.maze[this.player.y][this.player.x];
-        return !currentCell[direction];
+        const targetCell = this.maze[y][x];
+        
+        return !currentCell[direction] && !targetCell[oppositeDir[direction]];
     }
 
     showHint() {
