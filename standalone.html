@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>迷宫游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            margin-bottom: 15px;
+        }
+
+        .controls select,
+        .controls button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .controls select {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .controls button {
+            background: #3498db;
+            color: white;
+        }
+
+        .controls button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .controls button:active {
+            transform: translateY(0);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #34495e;
+        }
+
+        .status-item {
+            background: #ecf0f1;
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+
+        #mazeCanvas {
+            border: 3px solid #2c3e50;
+            border-radius: 8px;
+            background: #ecf0f1;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-content h2 {
+            color: #27ae60;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .modal-content p {
+            color: #34495e;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        .modal-content button {
+            margin-top: 20px;
+            padding: 12px 40px;
+            font-size: 16px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-content button:hover {
+            background: #2ecc71;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>迷宫游戏</h1>
+        </header>
+        
+        <div class="controls">
+            <select id="difficulty">
+                <option value="easy">简单</option>
+                <option value="medium">中等</option>
+                <option value="hard">困难</option>
+            </select>
+            <button id="startBtn">开始游戏</button>
+            <button id="pauseBtn">暂停</button>
+            <button id="hintBtn">提示</button>
+            <button id="resetBtn">重新开始</button>
+        </div>
+        
+        <div class="status-bar">
+            <span class="status-item">时间: <span id="timer">00:00</span></span>
+            <span class="status-item">得分: <span id="score">0</span></span>
+            <span class="status-item">状态: <span id="gameStatus">准备开始</span></span>
+        </div>
+        
+        <canvas id="mazeCanvas"></canvas>
+        
+        <div class="instructions">
+            <p>操作说明: 使用方向键或WASD控制移动 | 空格键暂停/继续 | R键重新开始</p>
+        </div>
+        
+        <div id="winModal" class="modal">
+            <div class="modal-content">
+                <h2>🎉 恭喜通关！</h2>
+                <p>用时: <span id="winTime">00:00</span></p>
+                <p>得分: <span id="winScore">0</span></p>
+                <button id="playAgainBtn">再玩一次</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        class MazeGenerator {
+            constructor(rows, cols) {
+                this.rows = rows;
+                this.cols = cols;
+                this.maze = [];
+            }
+
+            generate() {
+                this.initMaze();
+                this.recursiveBacktrack(0, 0);
+                return this.maze;
+            }
+
+            initMaze() {
+                for (let r = 0; r < this.rows; r++) {
+                    this.maze[r] = [];
+                    for (let c = 0; c < this.cols; c++) {
+                        this.maze[r][c] = {
+                            top: true,
+                            right: true,
+                            bottom: true,
+                            left: true,
+                            visited: false
+                        };
+                    }
+                }
+            }
+
+            recursiveBacktrack(row, col) {
+                this.maze[row][col].visited = true;
+                const directions = this.getRandomDirections();
+
+                for (const dir of directions) {
+                    const [newRow, newCol] = this.getNeighbor(row, col, dir);
+
+                    if (this.isValidCell(newRow, newCol) && !this.maze[newRow][newCol].visited) {
+                        this.removeWall(row, col, dir);
+                        this.recursiveBacktrack(newRow, newCol);
+                    }
+                }
+            }
+
+            getRandomDirections() {
+                const directions = ['top', 'right', 'bottom', 'left'];
+                for (let i = directions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [directions[i], directions[j]] = [directions[j], directions[i]];
+                }
+                return directions;
+            }
+
+            getNeighbor(row, col, direction) {
+                switch (direction) {
+                    case 'top': return [row - 1, col];
+                    case 'right': return [row, col + 1];
+                    case 'bottom': return [row + 1, col];
+                    case 'left': return [row, col - 1];
+                    default: return [row, col];
+                }
+            }
+
+            isValidCell(row, col) {
+                return row >= 0 && row < this.rows && col >= 0 && col < this.cols;
+            }
+
+            removeWall(row, col, direction) {
+                const oppositeDir = {
+                    'top': 'bottom',
+                    'right': 'left',
+                    'bottom': 'top',
+                    'left': 'right'
+                };
+
+                this.maze[row][col][direction] = false;
+                const [newRow, newCol] = this.getNeighbor(row, col, direction);
+                if (this.isValidCell(newRow, newCol)) {
+                    this.maze[newRow][newCol][oppositeDir[direction]] = false;
+                }
+            }
+
+            canMove(row, col, direction) {
+                if (!this.isValidCell(row, col)) return false;
+                return !this.maze[row][col][direction];
+            }
+        }
+
+        class PathFinder {
+            constructor(maze) {
+                this.maze = maze;
+            }
+
+            findPath(start, end) {
+                const openList = [start];
+                const closedList = [];
+                const cameFrom = {};
+                const gScore = {};
+                const fScore = {};
+
+                const startKey = `${start.x},${start.y}`;
+                gScore[startKey] = 0;
+                fScore[startKey] = this.heuristic(start, end);
+
+                while (openList.length > 0) {
+                    const current = this.getLowestFScore(openList, fScore);
+                    const currentKey = `${current.x},${current.y}`;
+
+                    if (current.x === end.x && current.y === end.y) {
+                        return this.reconstructPath(cameFrom, current);
+                    }
+
+                    this.removeFromList(openList, current);
+                    closedList.push(current);
+
+                    for (const neighbor of this.getNeighbors(current)) {
+                        const neighborKey = `${neighbor.x},${neighbor.y}`;
+                        
+                        if (this.contains(closedList, neighbor)) continue;
+
+                        const tentativeG = gScore[currentKey] + 1;
+
+                        if (!this.contains(openList, neighbor)) {
+                            openList.push(neighbor);
+                        } else if (tentativeG >= (gScore[neighborKey] || Infinity)) {
+                            continue;
+                        }
+
+                        cameFrom[neighborKey] = current;
+                        gScore[neighborKey] = tentativeG;
+                        fScore[neighborKey] = tentativeG + this.heuristic(neighbor, end);
+                    }
+                }
+                return null;
+            }
+
+            heuristic(a, b) {
+                return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+            }
+
+            getLowestFScore(list, fScore) {
+                let lowest = list[0];
+                let lowestScore = fScore[`${lowest.x},${lowest.y}`] || Infinity;
+
+                for (const item of list) {
+                    const score = fScore[`${item.x},${item.y}`] || Infinity;
+                    if (score < lowestScore) {
+                        lowest = item;
+                        lowestScore = score;
+                    }
+                }
+                return lowest;
+            }
+
+            removeFromList(list, item) {
+                const index = list.findIndex(i => i.x === item.x && i.y === item.y);
+                if (index !== -1) {
+                    list.splice(index, 1);
+                }
+            }
+
+            contains(list, item) {
+                return list.some(i => i.x === item.x && i.y === item.y);
+            }
+
+            getNeighbors(cell) {
+                const neighbors = [];
+                const directions = [
+                    { dx: 0, dy: -1 },
+                    { dx: 0, dy: 1 },
+                    { dx: -1, dy: 0 },
+                    { dx: 1, dy: 0 }
+                ];
+
+                for (const dir of directions) {
+                    const newX = cell.x + dir.dx;
+                    const newY = cell.y + dir.dy;
+
+                    if (this.isValidMove(cell.x, cell.y, dir)) {
+                        neighbors.push({ x: newX, y: newY });
+                    }
+                }
+                return neighbors;
+            }
+
+            isValidMove(x, y, direction) {
+                if (y < 0 || y >= this.maze.length || x < 0 || x >= this.maze[0].length) {
+                    return false;
+                }
+
+                const cell = this.maze[y][x];
+                let wallKey;
+
+                if (direction.dx === 0 && direction.dy === -1) wallKey = 'top';
+                else if (direction.dx === 0 && direction.dy === 1) wallKey = 'bottom';
+                else if (direction.dx === -1 && direction.dy === 0) wallKey = 'left';
+                else if (direction.dx === 1 && direction.dy === 0) wallKey = 'right';
+
+                return !cell[wallKey];
+            }
+
+            reconstructPath(cameFrom, current) {
+                const path = [current];
+                let key = `${current.x},${current.y}`;
+
+                while (cameFrom[key]) {
+                    current = cameFrom[key];
+                    path.unshift(current);
+                    key = `${current.x},${current.y}`;
+                }
+
+                return path;
+            }
+        }
+
+        class Renderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.colors = {
+                    wall: '#2c3e50',
+                    path: '#ecf0f1',
+                    start: '#27ae60',
+                    end: '#e74c3c',
+                    player: '#3498db',
+                    hint: '#f1c40f',
+                    trail: 'rgba(149, 165, 166, 0.5)'
+                };
+            }
+
+            setSize(width, height) {
+                this.canvas.width = width;
+                this.canvas.height = height;
+            }
+
+            drawMaze(maze, cellSize) {
+                const ctx = this.ctx;
+                const rows = maze.length;
+                const cols = maze[0].length;
+
+                ctx.fillStyle = this.colors.path;
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                ctx.strokeStyle = this.colors.wall;
+                ctx.lineWidth = 2;
+
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < cols; col++) {
+                        const x = col * cellSize;
+                        const y = row * cellSize;
+                        const cell = maze[row][col];
+
+                        if (cell.top) {
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x + cellSize, y);
+                            ctx.stroke();
+                        }
+                        if (cell.right) {
+                            ctx.beginPath();
+                            ctx.moveTo(x + cellSize, y);
+                            ctx.lineTo(x + cellSize, y + cellSize);
+                            ctx.stroke();
+                        }
+                        if (cell.bottom) {
+                            ctx.beginPath();
+                            ctx.moveTo(x + cellSize, y + cellSize);
+                            ctx.lineTo(x, y + cellSize);
+                            ctx.stroke();
+                        }
+                        if (cell.left) {
+                            ctx.beginPath();
+                            ctx.moveTo(x, y + cellSize);
+                            ctx.lineTo(x, y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            drawStart(startX, startY, cellSize) {
+                const ctx = this.ctx;
+                const x = startX * cellSize + cellSize / 2;
+                const y = startY * cellSize + cellSize / 2;
+                const radius = cellSize / 3;
+
+                ctx.fillStyle = this.colors.start;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.font = `${cellSize / 3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', x, y);
+            }
+
+            drawEnd(endX, endY, cellSize) {
+                const ctx = this.ctx;
+                const x = endX * cellSize + cellSize / 2;
+                const y = endY * cellSize + cellSize / 2;
+                const radius = cellSize / 3;
+
+                ctx.fillStyle = this.colors.end;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'white';
+                ctx.font = `${cellSize / 3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('E', x, y);
+            }
+
+            drawPlayer(playerX, playerY, cellSize) {
+                const ctx = this.ctx;
+                const x = playerX * cellSize + cellSize / 2;
+                const y = playerY * cellSize + cellSize / 2;
+                const radius = cellSize / 3.5;
+
+                ctx.fillStyle = this.colors.player;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            drawTrail(trail, cellSize) {
+                const ctx = this.ctx;
+                ctx.fillStyle = this.colors.trail;
+
+                for (const pos of trail) {
+                    const x = pos.x * cellSize + cellSize / 4;
+                    const y = pos.y * cellSize + cellSize / 4;
+                    ctx.fillRect(x, y, cellSize / 2, cellSize / 2);
+                }
+            }
+
+            drawHint(path, cellSize) {
+                const ctx = this.ctx;
+                ctx.fillStyle = this.colors.hint;
+
+                for (const pos of path) {
+                    const x = pos.x * cellSize + cellSize / 4;
+                    const y = pos.y * cellSize + cellSize / 4;
+                    ctx.fillRect(x, y, cellSize / 2, cellSize / 2);
+                }
+            }
+
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+
+        class Timer {
+            constructor() {
+                this.seconds = 0;
+                this.intervalId = null;
+                this.isRunning = false;
+            }
+
+            start() {
+                if (this.isRunning) return;
+                this.isRunning = true;
+                this.intervalId = setInterval(() => {
+                    this.seconds++;
+                    this.onTick?.(this.seconds);
+                }, 1000);
+            }
+
+            stop() {
+                if (!this.isRunning) return;
+                this.isRunning = false;
+                clearInterval(this.intervalId);
+            }
+
+            reset() {
+                this.stop();
+                this.seconds = 0;
+                this.onTick?.(this.seconds);
+            }
+
+            getTime() {
+                return this.seconds;
+            }
+
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
+        class GameController {
+            constructor(renderer, timer) {
+                this.renderer = renderer;
+                this.timer = timer;
+                this.maze = null;
+                this.mazeGenerator = null;
+                this.pathFinder = null;
+                this.player = { x: 0, y: 0, trail: [] };
+                this.start = { x: 0, y: 0 };
+                this.end = { x: 0, y: 0 };
+                this.hintPath = [];
+                this.score = 0;
+                this.status = 'idle';
+                this.difficulty = 'medium';
+                this.cellSize = 30;
+
+                this.difficultyConfig = {
+                    easy: { rows: 10, cols: 15, cellSize: 40 },
+                    medium: { rows: 15, cols: 20, cellSize: 30 },
+                    hard: { rows: 20, cols: 30, cellSize: 25 }
+                };
+
+                this.onStatusChange = null;
+                this.onScoreChange = null;
+            }
+
+            init(difficulty) {
+                this.difficulty = difficulty || this.difficulty;
+                const config = this.difficultyConfig[this.difficulty];
+                this.cellSize = config.cellSize;
+
+                this.mazeGenerator = new MazeGenerator(config.rows, config.cols);
+                this.maze = this.mazeGenerator.generate();
+
+                this.start = { x: 0, y: 0 };
+                this.end = { x: config.cols - 1, y: config.rows - 1 };
+
+                this.player = { x: 0, y: 0, trail: [{ x: 0, y: 0 }] };
+                this.hintPath = [];
+                this.score = 0;
+                this.status = 'idle';
+
+                this.pathFinder = new PathFinder(this.maze);
+
+                const width = config.cols * this.cellSize;
+                const height = config.rows * this.cellSize;
+                this.renderer.setSize(width, height);
+
+                this.render();
+                this.updateStatus('准备开始');
+                this.updateScore(0);
+            }
+
+            startGame() {
+                if (this.status === 'playing') return;
+
+                this.timer.reset();
+                this.timer.start();
+                this.status = 'playing';
+                this.updateStatus('游戏中');
+                this.updateScore(this.calculateScore());
+            }
+
+            pauseGame() {
+                if (this.status !== 'playing') return;
+
+                this.timer.stop();
+                this.status = 'paused';
+                this.updateStatus('已暂停');
+            }
+
+            resumeGame() {
+                if (this.status !== 'paused') return;
+
+                this.timer.start();
+                this.status = 'playing';
+                this.updateStatus('游戏中');
+            }
+
+            resetGame() {
+                this.timer.reset();
+                this.init(this.difficulty);
+            }
+
+            movePlayer(direction) {
+                if (this.status !== 'playing') return;
+
+                let newX = this.player.x;
+                let newY = this.player.y;
+
+                switch (direction) {
+                    case 'up': newY--; break;
+                    case 'down': newY++; break;
+                    case 'left': newX--; break;
+                    case 'right': newX++; break;
+                }
+
+                if (this.canMove(newX, newY, direction)) {
+                    this.player.x = newX;
+                    this.player.y = newY;
+
+                    const pos = { x: newX, y: newY };
+                    const trailIndex = this.player.trail.findIndex(p => p.x === newX && p.y === newY);
+                    if (trailIndex !== -1) {
+                        this.player.trail = this.player.trail.slice(0, trailIndex + 1);
+                    } else {
+                        this.player.trail.push(pos);
+                    }
+
+                    this.render();
+                    this.updateScore(this.calculateScore());
+
+                    if (this.player.x === this.end.x && this.player.y === this.end.y) {
+                        this.win();
+                    }
+                }
+            }
+
+            canMove(x, y, direction) {
+                if (y < 0 || y >= this.maze.length || x < 0 || x >= this.maze[0].length) {
+                    return false;
+                }
+
+                const oppositeDir = {
+                    'up': 'bottom',
+                    'down': 'top',
+                    'left': 'right',
+                    'right': 'left'
+                };
+
+                const currentCell = this.maze[this.player.y][this.player.x];
+                const targetCell = this.maze[y][x];
+                
+                return !currentCell[direction] && !targetCell[oppositeDir[direction]];
+            }
+
+            showHint() {
+                if (this.status !== 'playing') return;
+
+                const path = this.pathFinder.findPath(
+                    { x: this.player.x, y: this.player.y },
+                    { x: this.end.x, y: this.end.y }
+                );
+
+                if (path) {
+                    this.hintPath = path.slice(1);
+                    this.score = Math.max(0, this.score - 100);
+                    this.updateScore(this.score);
+                    this.render();
+
+                    setTimeout(() => {
+                        this.hintPath = [];
+                        this.render();
+                    }, 3000);
+                }
+            }
+
+            win() {
+                this.timer.stop();
+                this.status = 'completed';
+                this.updateStatus('通关！');
+                this.updateScore(this.calculateScore());
+
+                if (this.onWin) {
+                    this.onWin({
+                        time: this.timer.formatTime(this.timer.getTime()),
+                        score: this.score
+                    });
+                }
+            }
+
+            calculateScore() {
+                const baseScore = 1000;
+                const timePenalty = this.timer.getTime();
+                const difficultyBonus = {
+                    easy: 0,
+                    medium: 200,
+                    hard: 500
+                };
+
+                return Math.max(0, baseScore - timePenalty + difficultyBonus[this.difficulty]);
+            }
+
+            render() {
+                this.renderer.clear();
+                this.renderer.drawMaze(this.maze, this.cellSize);
+                this.renderer.drawStart(this.start.x, this.start.y, this.cellSize);
+                this.renderer.drawEnd(this.end.x, this.end.y, this.cellSize);
+                
+                if (this.player.trail.length > 1) {
+                    this.renderer.drawTrail(this.player.trail, this.cellSize);
+                }
+                
+                if (this.hintPath.length > 0) {
+                    this.renderer.drawHint(this.hintPath, this.cellSize);
+                }
+                
+                this.renderer.drawPlayer(this.player.x, this.player.y, this.cellSize);
+            }
+
+            updateStatus(status) {
+                if (this.onStatusChange) {
+                    this.onStatusChange(status);
+                }
+            }
+
+            updateScore(score) {
+                if (this.onScoreChange) {
+                    this.onScoreChange(score);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('mazeCanvas');
+            const difficultySelect = document.getElementById('difficulty');
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const hintBtn = document.getElementById('hintBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const timerDisplay = document.getElementById('timer');
+            const scoreDisplay = document.getElementById('score');
+            const gameStatusDisplay = document.getElementById('gameStatus');
+            const winModal = document.getElementById('winModal');
+            const winTimeDisplay = document.getElementById('winTime');
+            const winScoreDisplay = document.getElementById('winScore');
+            const playAgainBtn = document.getElementById('playAgainBtn');
+
+            const renderer = new Renderer(canvas);
+            const timer = new Timer();
+            const game = new GameController(renderer, timer);
+
+            timer.onTick = (seconds) => {
+                timerDisplay.textContent = timer.formatTime(seconds);
+                game.updateScore(game.calculateScore());
+            };
+
+            game.onStatusChange = (status) => {
+                gameStatusDisplay.textContent = status;
+            };
+
+            game.onScoreChange = (score) => {
+                scoreDisplay.textContent = score;
+            };
+
+            game.onWin = (result) => {
+                winTimeDisplay.textContent = result.time;
+                winScoreDisplay.textContent = result.score;
+                winModal.style.display = 'flex';
+            };
+
+            startBtn.addEventListener('click', () => {
+                game.startGame();
+            });
+
+            pauseBtn.addEventListener('click', () => {
+                if (game.status === 'playing') {
+                    game.pauseGame();
+                    pauseBtn.textContent = '继续';
+                } else if (game.status === 'paused') {
+                    game.resumeGame();
+                    pauseBtn.textContent = '暂停';
+                }
+            });
+
+            hintBtn.addEventListener('click', () => {
+                game.showHint();
+            });
+
+            resetBtn.addEventListener('click', () => {
+                pauseBtn.textContent = '暂停';
+                winModal.style.display = 'none';
+                game.resetGame();
+            });
+
+            difficultySelect.addEventListener('change', () => {
+                pauseBtn.textContent = '暂停';
+                winModal.style.display = 'none';
+                game.init(difficultySelect.value);
+            });
+
+            playAgainBtn.addEventListener('click', () => {
+                winModal.style.display = 'none';
+                pauseBtn.textContent = '暂停';
+                game.init(difficultySelect.value);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (winModal.style.display === 'flex') return;
+
+                switch (e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                    case 'W':
+                        e.preventDefault();
+                        game.movePlayer('up');
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                    case 'S':
+                        e.preventDefault();
+                        game.movePlayer('down');
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                    case 'A':
+                        e.preventDefault();
+                        game.movePlayer('left');
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                    case 'D':
+                        e.preventDefault();
+                        game.movePlayer('right');
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        if (game.status === 'playing') {
+                            game.pauseGame();
+                            pauseBtn.textContent = '继续';
+                        } else if (game.status === 'paused') {
+                            game.resumeGame();
+                            pauseBtn.textContent = '暂停';
+                        } else if (game.status === 'idle') {
+                            game.startGame();
+                        }
+                        break;
+                    case 'r':
+                    case 'R':
+                        e.preventDefault();
+                        pauseBtn.textContent = '暂停';
+                        game.resetGame();
+                        break;
+                }
+            });
+
+            game.init('medium');
+        });
+    </script>
+</body>
+</html>
