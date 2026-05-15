@@ -435,10 +435,59 @@
                     hell: 5
                 }[this.difficulty] || 2;
 
-                this.recursiveBacktrack(0, 0);
+                this.selectStartEnd();
+                this.recursiveBacktrack(this.startRow, this.startCol);
                 this.addBranchPaths(level);
                 
                 return this.maze;
+            }
+
+            selectStartEnd() {
+                const edges = ['top', 'bottom', 'left', 'right'];
+                let startEdge = edges[Math.floor(Math.random() * edges.length)];
+                let endEdge = edges[Math.floor(Math.random() * edges.length)];
+                
+                while (endEdge === startEdge) {
+                    endEdge = edges[Math.floor(Math.random() * edges.length)];
+                }
+
+                switch (startEdge) {
+                    case 'top':
+                        this.startRow = 0;
+                        this.startCol = Math.floor(Math.random() * (this.cols - 2)) + 1;
+                        break;
+                    case 'bottom':
+                        this.startRow = this.rows - 1;
+                        this.startCol = Math.floor(Math.random() * (this.cols - 2)) + 1;
+                        break;
+                    case 'left':
+                        this.startRow = Math.floor(Math.random() * (this.rows - 2)) + 1;
+                        this.startCol = 0;
+                        break;
+                    case 'right':
+                        this.startRow = Math.floor(Math.random() * (this.rows - 2)) + 1;
+                        this.startCol = this.cols - 1;
+                        break;
+                }
+
+                switch (endEdge) {
+                    case 'top':
+                        this.endRow = 0;
+                        this.endCol = Math.floor(Math.random() * (this.cols - 2)) + 1;
+                        break;
+                    case 'bottom':
+                        this.endRow = this.rows - 1;
+                        this.endCol = Math.floor(Math.random() * (this.cols - 2)) + 1;
+                        break;
+                    case 'left':
+                        this.endRow = Math.floor(Math.random() * (this.rows - 2)) + 1;
+                        this.endCol = 0;
+                        break;
+                    case 'right':
+                        this.endRow = Math.floor(Math.random() * (this.rows - 2)) + 1;
+                        this.endCol = this.cols - 1;
+                        break;
+                }
             }
 
             initMaze() {
@@ -472,16 +521,35 @@
 
             addBranchPaths(level) {
                 const branchCount = {
-                    1: Math.floor((this.rows * this.cols) * 0.02),
-                    2: Math.floor((this.rows * this.cols) * 0.06),
-                    3: Math.floor((this.rows * this.cols) * 0.12),
-                    4: Math.floor((this.rows * this.cols) * 0.18),
-                    5: Math.floor((this.rows * this.cols) * 0.25)
+                    1: Math.floor((this.rows * this.cols) * 0.04),
+                    2: Math.floor((this.rows * this.cols) * 0.08),
+                    3: Math.floor((this.rows * this.cols) * 0.14),
+                    4: Math.floor((this.rows * this.cols) * 0.22),
+                    5: Math.floor((this.rows * this.cols) * 0.32)
                 }[level] || 5;
 
                 for (let i = 0; i < branchCount; i++) {
                     this.createBranch(level);
                 }
+
+                if (level >= 2) {
+                    this.addEarlyBranches(level);
+                }
+
+                if (level >= 3) {
+                    this.addDetours(level);
+                }
+            }
+
+            getBranchDensity(row, col, level) {
+                const distToStart = Math.abs(row - this.startRow) + Math.abs(col - this.startCol);
+                const maxDist = this.rows + this.cols;
+                const progress = distToStart / maxDist;
+                
+                const baseDensity = { 1: 0.04, 2: 0.08, 3: 0.14, 4: 0.22, 5: 0.32 }[level] || 0.08;
+                const earlyBonus = progress < 0.2 ? 2.5 : progress < 0.4 ? 1.5 : 1;
+                
+                return baseDensity * earlyBonus;
             }
 
             createBranch(level) {
@@ -491,38 +559,97 @@
                         const cell = this.maze[r][c];
                         const openPaths = [cell.top, cell.right, cell.bottom, cell.left].filter(p => !p).length;
                         if (openPaths >= 1 && openPaths <= 2) {
-                            availableCells.push({ row: r, col: c });
+                            const density = this.getBranchDensity(r, c, level);
+                            if (Math.random() < density * 2) {
+                                availableCells.push({ row: r, col: c, priority: this.getBranchPriority(r, c, level) });
+                            }
                         }
                     }
                 }
 
                 if (availableCells.length === 0) return;
 
-                const idx = Math.floor(Math.random() * availableCells.length);
+                availableCells.sort((a, b) => b.priority - a.priority);
+                const idx = Math.min(Math.floor(Math.random() * availableCells.length * 0.4), availableCells.length - 1);
                 const startCell = availableCells[idx];
 
                 this.growBranch(startCell.row, startCell.col, level);
             }
 
+            getBranchPriority(row, col, level) {
+                const distToStart = Math.abs(row - this.startRow) + Math.abs(col - this.startCol);
+                const distToEnd = Math.abs(row - this.endRow) + Math.abs(col - this.endCol);
+                const progress = distToStart / (this.rows + this.cols);
+                
+                let priority = 0;
+                if (progress < 0.2) priority += 3;
+                else if (progress < 0.4) priority += 2;
+                
+                if (distToEnd < (this.rows + this.cols) * 0.3) priority += 2;
+                
+                return priority;
+            }
+
+            getDirectionToEnd(row, col) {
+                const rowDiff = this.endRow - row;
+                const colDiff = this.endCol - col;
+                
+                if (Math.abs(rowDiff) > Math.abs(colDiff)) {
+                    return rowDiff > 0 ? 'bottom' : 'top';
+                } else {
+                    return colDiff > 0 ? 'right' : 'left';
+                }
+            }
+
+            getDirectionAwayFromEnd(row, col) {
+                const rowDiff = this.endRow - row;
+                const colDiff = this.endCol - col;
+                
+                if (Math.abs(rowDiff) > Math.abs(colDiff)) {
+                    return rowDiff > 0 ? 'top' : 'bottom';
+                } else {
+                    return colDiff > 0 ? 'left' : 'right';
+                }
+            }
+
             growBranch(startRow, startCol, level) {
                 const branchLengths = {
-                    1: { min: 3, max: 8 },
-                    2: { min: 5, max: 12 },
-                    3: { min: 8, max: 18 },
-                    4: { min: 12, max: 25 },
-                    5: { min: 15, max: 35 }
+                    1: { min: 5, max: 12 },
+                    2: { min: 8, max: 18 },
+                    3: { min: 12, max: 25 },
+                    4: { min: 18, max: 35 },
+                    5: { min: 22, max: 45 }
                 };
                 
+                const distToEnd = Math.abs(startRow - this.endRow) + Math.abs(startCol - this.endCol);
+                const maxDist = this.rows + this.cols;
+                const remainingProgress = distToEnd / maxDist;
+                
                 const lengthConfig = branchLengths[level] || { min: 5, max: 12 };
+                const nearEndBonus = remainingProgress < 0.3 ? 1.8 : remainingProgress < 0.5 ? 1.4 : 1;
+                
                 const range = lengthConfig.max - lengthConfig.min;
-                const maxLength = Math.floor(Math.random() * range) + lengthConfig.min;
+                let maxLength = Math.floor(Math.random() * range) + lengthConfig.min;
+                maxLength = Math.floor(maxLength * nearEndBonus);
+
+                const preferDeceptive = level >= 2 && Math.random() < 0.4;
+                const primaryDir = preferDeceptive ? this.getDirectionToEnd(startRow, startCol) : null;
+
                 let row = startRow;
                 let col = startCol;
                 let prevRow = -1;
                 let prevCol = -1;
 
                 for (let i = 0; i < maxLength; i++) {
-                    const directions = this.getRandomDirections();
+                    let directions = this.getRandomDirections();
+                    
+                    if (preferDeceptive && primaryDir && i === 0) {
+                        const idx = directions.indexOf(primaryDir);
+                        if (idx !== -1) {
+                            [directions[0], directions[idx]] = [directions[idx], directions[0]];
+                        }
+                    }
+
                     let moved = false;
 
                     for (const dir of directions) {
@@ -558,6 +685,115 @@
                     }
 
                     if (!moved) break;
+                }
+            }
+
+            addEarlyBranches(level) {
+                const earlyBranchCount = { 2: 2, 3: 4, 4: 6, 5: 8 }[level] || 2;
+                
+                for (let i = 0; i < earlyBranchCount; i++) {
+                    this.createEarlyBranch(level);
+                }
+            }
+
+            createEarlyBranch(level) {
+                const earlyCells = [];
+                const maxDist = Math.floor((this.rows + this.cols) * 0.2);
+                
+                for (let r = 0; r < this.rows; r++) {
+                    for (let c = 0; c < this.cols; c++) {
+                        const distToStart = Math.abs(r - this.startRow) + Math.abs(c - this.startCol);
+                        if (distToStart <= maxDist && distToStart > 1) {
+                            const cell = this.maze[r][c];
+                            const openPaths = [cell.top, cell.right, cell.bottom, cell.left].filter(p => !p).length;
+                            if (openPaths >= 1 && openPaths <= 2) {
+                                earlyCells.push({ row: r, col: c });
+                            }
+                        }
+                    }
+                }
+
+                if (earlyCells.length === 0) return;
+
+                const idx = Math.floor(Math.random() * earlyCells.length);
+                const startCell = earlyCells[idx];
+                this.growBranch(startCell.row, startCell.col, level);
+            }
+
+            addDetours(level) {
+                const detourCount = { 3: 1, 4: 2, 5: 3 }[level] || 0;
+                
+                for (let i = 0; i < detourCount; i++) {
+                    this.createDetour();
+                }
+            }
+
+            createDetour() {
+                const pathCells = [];
+                for (let r = 1; r < this.rows - 1; r++) {
+                    for (let c = 1; c < this.cols - 1; c++) {
+                        const cell = this.maze[r][c];
+                        const openPaths = [cell.top, cell.right, cell.bottom, cell.left].filter(p => !p).length;
+                        if (openPaths === 2) {
+                            pathCells.push({ row: r, col: c });
+                        }
+                    }
+                }
+
+                if (pathCells.length === 0) return;
+
+                const idx = Math.floor(Math.random() * pathCells.length);
+                const startCell = pathCells[idx];
+                const awayDir = this.getDirectionAwayFromEnd(startCell.row, startCell.col);
+                const towardDir = this.getDirectionToEnd(startCell.row, startCell.col);
+
+                let row = startCell.row;
+                let col = startCell.col;
+                const detourLength = Math.floor(Math.random() * 4) + 3;
+
+                for (let i = 0; i < detourLength; i++) {
+                    const [newRow, newCol] = this.getNeighbor(row, col, awayDir);
+                    if (!this.isValidCell(newRow, newCol) || !this.maze[row][col][awayDir]) break;
+                    
+                    const oppositeDir = { 'top': 'bottom', 'right': 'left', 'bottom': 'top', 'left': 'right' };
+                    if (!this.maze[newRow][newCol][oppositeDir[awayDir]]) {
+                        const targetOpenPaths = [
+                            this.maze[newRow][newCol].top,
+                            this.maze[newRow][newCol].right,
+                            this.maze[newRow][newCol].bottom,
+                            this.maze[newRow][newCol].left
+                        ].filter(p => !p).length;
+                        
+                        if (targetOpenPaths === 0) {
+                            this.maze[row][col][awayDir] = false;
+                            this.maze[newRow][newCol][oppositeDir[awayDir]] = false;
+                            row = newRow;
+                            col = newCol;
+                        } else break;
+                    } else break;
+                }
+
+                const sideDir = Math.random() > 0.5 ? 'left' : 'right';
+                for (let i = 0; i < 3; i++) {
+                    const [newRow, newCol] = this.getNeighbor(row, col, sideDir);
+                    if (!this.isValidCell(newRow, newCol) || !this.maze[row][col][sideDir]) break;
+                    
+                    const oppositeDir = { 'top': 'bottom', 'right': 'left', 'bottom': 'top', 'left': 'right' };
+                    if (!this.maze[newRow][newCol][oppositeDir[sideDir]]) {
+                        const targetOpenPaths = [
+                            this.maze[newRow][newCol].top,
+                            this.maze[newRow][newCol].right,
+                            this.maze[newRow][newCol].bottom,
+                            this.maze[newRow][newCol].left
+                        ].filter(p => !p).length;
+                        
+                        if (targetOpenPaths === 0) {
+                            this.maze[row][col][sideDir] = false;
+                            this.maze[newRow][newCol][oppositeDir[sideDir]] = false;
+                            row = newRow;
+                            col = newCol;
+                        } else break;
+                    } else break;
                 }
             }
 
@@ -996,10 +1232,10 @@
                 this.mazeGenerator = new MazeGenerator(config.rows, config.cols, this.difficulty);
                 this.maze = this.mazeGenerator.generate();
 
-                this.start = { x: 0, y: 0 };
-                this.end = { x: config.cols - 1, y: config.rows - 1 };
+                this.start = { x: this.mazeGenerator.startCol, y: this.mazeGenerator.startRow };
+                this.end = { x: this.mazeGenerator.endCol, y: this.mazeGenerator.endRow };
 
-                this.player = { x: 0, y: 0, trail: [{ x: 0, y: 0 }] };
+                this.player = { x: this.start.x, y: this.start.y, trail: [{ x: this.start.x, y: this.start.y }] };
                 this.hintPath = [];
                 this.score = 0;
                 this.status = 'idle';
